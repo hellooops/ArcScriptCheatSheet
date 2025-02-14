@@ -31,6 +31,9 @@ company = ContactCompany
 [*]
 [someone.*]
 [someone.name]
+
+<arc:set attr="item.space:attrName" value="1"/>
+[item.space:attrName]
 ```
 ### Array
 ```xml
@@ -183,7 +186,107 @@ space2:var1	a
 space2:var2	b -->
 [item3.*]
 ```
-### define function
+### Function
+There are 2 ways to define a function
+#### Call script as function
+Define functions
+```xml
+<!-- utils.rsb -->
+<arc:null attr="_input.meta:method">
+  <arc:throw code="MethodNotSet" desc="Invoke utils.rsb without method set." />
+</arc:null>
+
+<arc:select value="[_input.meta:method]">
+  <arc:case value="sum">
+    <arc:set attr="output.result" value="0"/>
+    <arc:enum attr="_input.args:*">
+      <arc:set attr="output.result" value="[output.result|add([_value])]"/>
+    </arc:enum>
+    <arc:push item="output"/>
+    <arc:break/>
+  </arc:case>
+  <arc:case value="fabonacci">
+    <arc:if exp="[_input.args:n] == 1">
+      <arc:set attr="output.result" value="1"/>
+      <arc:else>
+        <arc:if exp="[_input.args:n] == 2">
+          <arc:set attr="output.result" value="1"/>
+          <arc:else>
+            <arc:set attr="fabonacciIn.meta:method" value="fabonacci"/>
+
+            <arc:set attr="fabonacciIn.args:n" value="[_input.args:n | subtract(1)]"/>
+            <arc:call op="utils.rsb" in="fabonacciIn" out="fabonacciOut">
+              <arc:set attr="tmp.result1" value="[fabonacciOut.result]"/>
+            </arc:call>
+
+            <arc:set attr="fabonacciIn.args:n" value="[_input.args:n | subtract(2)]"/>
+            <arc:call op="utils.rsb" in="fabonacciIn" out="fabonacciOut">
+              <arc:set attr="tmp.result2" value="[fabonacciOut.result]"/>
+            </arc:call>
+
+            <arc:set attr="output.result" value="[tmp.result1 | add([tmp.result2])]"/>
+          </arc:else>
+        </arc:if>
+      </arc:else>
+    </arc:if>
+    <arc:push item="output"/>
+    <arc:break/>
+  </arc:case>
+  <arc:default>
+    <arc:throw code="MethodNotFound" desc="Could not find method [_input.meta:method]" />
+  </arc:default>
+</arc:select>
+```
+
+Call function
+```xml
+<arc:set attr="sumIn.args:a" value="11"/>
+<arc:set attr="sumIn.args:b" value="2"/>
+<arc:set attr="sumIn.args:c" value="100"/>
+<arc:set attr="sumIn.meta:method" value="sum"/>
+<arc:call op="utils.rsb" in="sumIn" out="sumOut">
+  [sumOut.*]
+</arc:call>
+
+
+<arc:enum range="1..5">
+  <arc:set attr="fabonacciIn.args:n" value="[_value]"/>
+  <arc:set attr="fabonacciIn.meta:method" value="fabonacci"/>
+  <arc:call op="utils.rsb" in="fabonacciIn" out="fabonacciOut">
+    [fabonacciOut.result]
+  </arc:call>
+</arc:enum>
+
+```
+
+#### use arc:render as function
+```xml
+<arc:setc attr="utils.sum" value="[a|add([b])]"/>
+
+<arc:set attr="sumIn.a" value="1"/>
+<arc:set attr="sumIn.b" value="2"/>
+<arc:render templateData="[utils.sum]" in="sumIn" to="output1.result" />
+[output1.result]
+
+
+<arc:setc attr="utils.sum2">
+  <!-- Note: The code here need to be escaped. -->
+  <!--
+  <arc:set attr="tmp.a" value="[a]"/>
+  <arc:set attr="tmp.b" value="[b]"/>
+  <arc:set attr="tmp.c" value="[tmp.a|add([tmp.b])]"/>
+  -->
+  &lt;arc:set attr=&quot;tmp.a&quot; value=&quot;[a]&quot;/&gt;
+  &lt;arc:set attr=&quot;tmp.b&quot; value=&quot;[b]&quot;/&gt;
+  &lt;arc:set attr=&quot;tmp.c&quot; value=&quot;[tmp.a|add([tmp.b])]&quot;/&gt;
+  [tmp.c]
+</arc:setc>
+
+<arc:render templateData="[utils.sum2]" in="sumIn" to="output2.result" />
+[output2.result]
+```
+
+
 ### Logs
 ```xml
 <arc:set attr="_log.info">info</arc:set>
@@ -191,7 +294,33 @@ space2:var2	b -->
 <arc:set attr="_log.error">error</arc:set>
 ```
 ### call
+Call Ops
+```xml
+<arc:set attr="fileListDirIn.path" value="C:\\"/>
+<arc:call op="fileListDir" in="fileListDirIn" out="output">
+  [output.file:name]
+</arc:call>
+```
+
+Call Script
+```xml
+<!-- script1.rsb -->
+<arc:set attr="result.name" value="Deric"/>
+<arc:push item="result"/>
+
+<!-- script2.rsb -->
+<arc:call op="script1.rsb" out="out">
+  [out.*]
+</arc:call>
+```
+
+
+
 ### push
+```xml
+<arc:set attr="output.name" value="Deric"/>
+<arc:push item="output" />
+```
 
 ## Ops
 ### dbBeginTransaction
